@@ -1,7 +1,11 @@
 import streamlit as st
 import requests
+from dotenv import load_dotenv
+import os
 
-API_URL = "http://127.0.0.1:8000/"
+load_dotenv()
+
+API_URL = os.getenv("API_URL")
 
 if 'token' not in st.session_state:
     st.session_state['token'] = None

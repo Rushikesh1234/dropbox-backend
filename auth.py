@@ -6,10 +6,14 @@ from database import get_db
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 from models import User
+from dotenv import load_dotenv
+import os
 
-SECRET_KEY = "0ysKR-tZcPukS9LfpOTz6cIgWZulczYeTQxgqTeGmVZbzBZB5bcCVbMpYpRxnD3I-L8Qn2j1FrHvZzE9xJTkWw"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
+ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
