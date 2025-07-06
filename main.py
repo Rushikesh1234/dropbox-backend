@@ -1,3 +1,5 @@
+
+'''
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
@@ -120,4 +122,20 @@ def get_user_files(
         }
         for f in files
     ]
+'''
 
+
+from fastapi import FastAPI
+from database import Base, engine
+
+from api_services import register, login, upload_file, download_file, show_all_files
+
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI()
+
+app.include_router(register.router)
+app.include_router(login.router)
+app.include_router(upload_file.router)
+app.include_router(download_file.router)
+app.include_router(show_all_files.router)
