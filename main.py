@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
 from database import SessionLocal, engine, Base, get_db
@@ -12,6 +12,7 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 import os
+from typing import Optional
 
 Base.metadata.create_all(bind=engine)
 
@@ -24,7 +25,10 @@ class UserCreate(BaseModel):
     password:str
 
 @app.post("/register")
-def register(user:UserCreate, db:Session = Depends(get_db)):
+def register(
+    user:UserCreate, 
+    db:Session = Depends(get_db)
+):
     db_user = db.query(User).filter(User.username == user.username).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username exists")
@@ -41,7 +45,10 @@ def register(user:UserCreate, db:Session = Depends(get_db)):
     return {"msg": "User created"}
 
 @app.post("/login")
-def login(user:UserCreate, db:Session=Depends(get_db)):
+def login(
+    user:UserCreate, 
+    db:Session=Depends(get_db)
+):
     db_user = db.query(User).filter(User.username == user.username).first()
     if not db_user or not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(status_code=400, detail="Invalid credentials")
@@ -62,23 +69,36 @@ s3 = boto3.client(
 )
 
 @app.post("/upload")
-def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def upload_file(
+    file: UploadFile = File(...), 
+    folder: Optional[str] = Form(""), 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    timestamp = datetime.utcnow().isoformat()
+    safe_filename = file.filename.replace(" ", "-")
+
+    if folder:
+        s3_key = f"{folder.strip('/')}/{timestamp}_{safe_filename}"
+    else:
+        s3_key = f"{timestamp}_{safe_filename}"
     
-    key = f"{datetime.utcnow().isoformat()}_{file.filename}"
-    s3.upload_fileobj(file.file, S3_BUCKET_NAME, key)
+    s3.upload_fileobj(file.file, S3_BUCKET_NAME, s3_key)
 
     new_file = File_Metadata(
         filename = file.filename,
         owner_id = current_user.id,
-        s3_key = key
+        s3_key = s3_key
     )
     db.add(new_file)
     db.commit()
-
-    return {"msg": "File uploaded", "s3_key":key}
+    return {"msg": "File uploaded", "s3_key":s3_key}
 
 @app.get("/download")
-def download_file(key: str, current_user: User = Depends(get_current_user)):
+def download_file(
+    key: str, current_user: 
+    User = Depends(get_current_user)
+):
     url = s3.generate_presigned_url(
         'get_object',
         Params={'Bucket': S3_BUCKET_NAME, 'Key': key},
@@ -87,7 +107,10 @@ def download_file(key: str, current_user: User = Depends(get_current_user)):
     return {"url": url}
 
 @app.get("/files")
-def get_user_files(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_user_files(
+    current_user: User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
     files = db.query(File_Metadata).filter(File_Metadata.owner_id == current_user.id).all()
     return [
         {
