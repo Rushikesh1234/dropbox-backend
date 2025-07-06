@@ -1,8 +1,9 @@
-import os
-import boto3
-from dotenv import load_dotenv
 
-load_dotenv()
+import boto3
+from utils.secrets import load_secrets
+import os
+
+load_secrets()
 
 AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY")
 AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY")

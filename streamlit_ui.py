@@ -1,10 +1,10 @@
 import streamlit as st
 import requests
-from dotenv import load_dotenv
-import os
-from collections import defaultdict
 
-load_dotenv()
+from utils.secrets import load_secrets
+import os
+
+load_secrets()
 
 API_URL = os.getenv("API_URL")
 

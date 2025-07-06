@@ -1,10 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-
-from dotenv import load_dotenv
+from utils.secrets import load_secrets
 import os
 
-load_dotenv()
+load_secrets()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
