@@ -29,7 +29,7 @@ Users (Web UI)  <--->  Streamlit UI (Port 8501)
 - Upload files to S3 with metadata in RDS
 - List user files with metadata
 - Download files from S3
-- Basic folder structure support (phase 2+)
+- Basic folder structure support
 - Deploy on AWS EC2 with Amazon Linux
 
 ---
@@ -59,8 +59,8 @@ Users (Web UI)  <--->  Streamlit UI (Port 8501)
 1. Clone repo
 
 ```bash
-git clone https://github.com/yourusername/dropbox-clone.git
-cd dropbox-clone
+git clone https://github.com/Rushikesh1234/dropbox-backend.git
+cd dropbox-backend
 ```
 
 2. Create and activate virtual environment
