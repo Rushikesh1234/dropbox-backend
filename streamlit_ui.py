@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-
+import math, io
 from utils.secrets import load_secrets
 import os
 
@@ -85,15 +85,87 @@ else:
     st.header("Upload File")
     folder = st.text_input("Optional Folder name. (e.g. folder_name or folder_name/sub_folder_name)")
     uploaded_file = st.file_uploader("Choose a file to upload")
-    if st.button("Upload") and uploaded_file:
-        files = {'file': (uploaded_file.name, uploaded_file, uploaded_file.type)}
-        res = requests.post(f"{API_URL}/upload", files=files, data={"folder":folder}, headers=headers)
+    ONE_GB = 1 * 1024 * 1024 * 1024
 
-        if res.status_code == 200:
-            st.success("Upload successful")
-            st.write(res.json())
+    if uploaded_file:
+        st.write(f"File size: {uploaded_file.size / (1024 ** 3):.2f} GB")
+        if uploaded_file.size < ONE_GB:
+            if st.button("Upload Small File"):
+                files = {'file': (uploaded_file.name, uploaded_file, uploaded_file.type)}
+                res = requests.post(f"{API_URL}/upload", files=files, data={"folder":folder}, headers=headers)
+                if res.status_code == 200:
+                    st.success("Upload successful")
+                    st.write(res.json())
+                else:
+                    st.error("Upload failed {res.status_code}")
         else:
-            st.error("Upload failed {res.status_code}")
+            if st.button("Upload Large File"):
+                CHUNK_SIZE = 5 * 1024 * 1024
+                filename = uploaded_file.name
+                upload_progress = st.empty()
+                
+                initiate_multipart_upload_res = requests.post(
+                    f"{API_URL}/upload/initiate",
+                    data={"filename": filename, "folder":folder},
+                    headers=headers             
+                )
+
+                if initiate_multipart_upload_res != 200:
+                    st.error("Failed to initiate upload")
+                    st.stop()
+                
+                upload_id = initiate_multipart_upload_res.json()["upload_id"]
+                s3_key = initiate_multipart_upload_res.json()["s3_key"]
+
+                file_data = uploaded_file.read()
+                file_size = len(file_data)
+                total_parts = math.ceil(file_size / CHUNK_SIZE)
+
+                st.info(f"Uploading {total_parts} chunks...")
+
+                parts_info = []
+
+                for i in range(total_parts):
+                    part_number = i + 1
+                    start = i * CHUNK_SIZE
+                    end = min(start + CHUNK_SIZE, file_size)
+                    chunk_bytes = file_data[start:end]
+
+                    files = {
+                        "chunk" : ("chunk", io.BytesIO(chunk_bytes), "application/octet-stream")
+                    }
+
+                    data = {
+                        "upload_id": upload_id,
+                        "s3_key": s3_key,
+                        "part_number": part_number
+                    }
+
+                    chunk_response = requests.post(f"{API_URL}/upload/chunk", data=data, files=files)
+                    if chunk_response != 200:
+                        st.error(f"Failed on part {part_number}: {chunk_response.text}")
+                        requests.post(f"{API_URL}/upload/abort", data={"upload_id": upload_id, "s3_key": s3_key})
+                        st.stop()
+                    
+                    etag = chunk_response.json()["etag"]
+                    parts_info.append({"part_number": part_number, "etag": etag})
+                    upload_progress.progress(part_number/total_parts)
+                
+                complete_upload_payload = {
+                    "upload_id": upload_id,
+                    "s3_key": s3_key,
+                    "filename": filename,
+                    "folder": folder,
+                    "parts": parts_info
+                }
+
+                final_res = requests.get(f"{API_URL}/upload/complete", json=complete_upload_payload, headers=headers)
+
+                if final_res.status_code == 200:
+                    st.success("Upload successful")
+                    st.write(final_res.json())
+                else:
+                    st.error("Upload failed {final_res.status_code}")
 
     st.header("Download File")
     file_key = st.text_input("Enter file key")
