@@ -85,11 +85,11 @@ else:
     st.header("Upload File")
     folder = st.text_input("Optional Folder name. (e.g. folder_name or folder_name/sub_folder_name)")
     uploaded_file = st.file_uploader("Choose a file to upload")
-    ONE_GB = 1 * 1024 * 1024 * 1024
+    TWO_HUNDRED_MB = 200 * 1024 * 1024
 
     if uploaded_file:
-        st.write(f"File size: {uploaded_file.size / (1024 ** 3):.2f} GB")
-        if uploaded_file.size < ONE_GB:
+        st.write(f"File size: {uploaded_file.size / (1024 ** 2):.2f} MB")
+        if uploaded_file.size < TWO_HUNDRED_MB:
             if st.button("Upload Small File"):
                 files = {'file': (uploaded_file.name, uploaded_file, uploaded_file.type)}
                 res = requests.post(f"{API_URL}/upload", files=files, data={"folder":folder}, headers=headers)
@@ -100,7 +100,7 @@ else:
                     st.error("Upload failed {res.status_code}")
         else:
             if st.button("Upload Large File"):
-                CHUNK_SIZE = 5 * 1024 * 1024
+                CHUNK_SIZE = 20 * 1024 * 1024
                 filename = uploaded_file.name
                 upload_progress = st.empty()
                 
