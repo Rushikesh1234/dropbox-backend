@@ -35,8 +35,24 @@ def show_tree(tree, level=0):
                 if st.button(f"⬇️ Download {file['filename'].split('_')[1]}", key=file["s3_key"]):
                     res = requests.get(f"{API_URL}/download", params={"key":file["s3_key"]}, headers=headers)
                     if res.status_code == 200:
-                        url = res.json()["url"]
-                        st.markdown(" " * level + f"[🔗 Click to download]({url})", unsafe_allow_html=True)
+                        data = res.json()
+                        url = data["url"]
+                        if data.get("stream", False):
+                            with requests.get(url, stream=True, headers=headers) as r:
+                                if r.status_code == 200:
+                                    file_bytes = b""
+                                    for chunk in r.iter_content(chunk_size=8192):
+                                        file_bytes += chunk
+                                    st.download_button(
+                                        label="Download Large File",
+                                        data=file_bytes,
+                                        file_name=file["filename"],
+                                        mime="application/octet-stream"
+                                    )
+                                else:
+                                    st.error(f"❌ Failed to stream file ({r.status_code})")
+                        else:
+                            st.markdown(" " * level + f"[🔗 Click to download]({url})", unsafe_allow_html=True)
                     else:
                         st.error(f"❌ Failed to generate link ({res.status_code})")
         else:

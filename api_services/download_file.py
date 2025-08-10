@@ -26,7 +26,7 @@ def download_file(
             return {"url": url}
         else:
             stream_url = f"{API_URL}/download/stream?key={key}"
-            return {"url": stream_url}
+            return {"url": stream_url, "stream": True}
     
     except s3.exceptions.ClientError as e:
         raise HTTPException(status_code=404, detail="File not found or access denied - {e}")
